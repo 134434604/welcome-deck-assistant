@@ -1,0 +1,395 @@
+<script>
+  const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const state = {
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    rows: [],
+    settings: {},
+    selectedQueueId: '',
+    filter: 'active',
+    search: ''
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    buildMonthYearControls();
+    bindEvents();
+    refreshState();
+  }
+
+  function buildMonthYearControls() {
+    const monthSelect = qs('#monthSelect');
+    MONTHS.forEach((name, index) => {
+      const option = document.createElement('option');
+      option.value = String(index + 1);
+      option.textContent = name;
+      monthSelect.appendChild(option);
+    });
+    monthSelect.value = String(state.month);
+
+    const yearSelect = qs('#yearSelect');
+    for (let year = state.year - 1; year <= state.year + 2; year++) {
+      const option = document.createElement('option');
+      option.value = String(year);
+      option.textContent = String(year);
+      yearSelect.appendChild(option);
+    }
+    yearSelect.value = String(state.year);
+  }
+
+  function bindEvents() {
+    qs('#monthSelect').addEventListener('change', () => {
+      state.month = Number(qs('#monthSelect').value);
+      refreshState();
+    });
+    qs('#yearSelect').addEventListener('change', () => {
+      state.year = Number(qs('#yearSelect').value);
+      refreshState();
+    });
+    qs('#syncBtn').addEventListener('click', () => runAction('generateWelcomeQueue', [state.month, state.year], 'Queue synced.'));
+    qs('#findAllBtn').addEventListener('click', () => runAction('findPhotosForQueue', [state.month, state.year], 'Photo search complete.'));
+    qs('#buildAllBtn').addEventListener('click', () => runAction('buildWelcomeSlidesForApproved', [state.month, state.year], 'Slides built.'));
+    qs('#collageBtn').addEventListener('click', () => runAction('updateCollageSlideForMonth', [state.month, state.year], 'Collage updated.'));
+    qs('#searchInput').addEventListener('input', event => {
+      state.search = event.target.value.toLowerCase();
+      renderQueue();
+    });
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach(item => item.classList.remove('active'));
+        chip.classList.add('active');
+        state.filter = chip.dataset.filter;
+        renderQueue();
+      });
+    });
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
+    qs('#saveSettingsBtn').addEventListener('click', saveSettings);
+    qs('#saveSlackBtn').addEventListener('click', saveSlackToken);
+    qs('#clearSlackBtn').addEventListener('click', clearSlackToken);
+  }
+
+  function refreshState() {
+    setBusy(true);
+    server('getWelcomeAppState', [state.month, state.year])
+      .then(response => {
+        state.rows = response.data.queueRows || [];
+        state.settings = response.data.settings || {};
+        if (!state.selectedQueueId && state.rows.length) state.selectedQueueId = state.rows[0]['Queue ID'];
+        render();
+      })
+      .catch(error => toast(error.message || String(error), true))
+      .finally(() => setBusy(false));
+  }
+
+  function render() {
+    renderSummary();
+    renderWarnings();
+    renderQueue();
+    renderDetail();
+    renderSettings();
+  }
+
+  function renderSummary() {
+    const summary = summarizeRows(state.rows);
+    qs('#summary').innerHTML = [
+      metric('New hires', summary.total),
+      metric('Needs photo', summary.needsPhoto),
+      metric('Candidates', summary.candidatesFound),
+      metric('Approved photos', summary.photoApproved),
+      metric('Slides built', summary.slidesAdded)
+    ].join('');
+  }
+
+  function metric(label, value) {
+    return `<div class="metric"><strong>${escapeHtml(value)}</strong>${escapeHtml(label)}</div>`;
+  }
+
+  function renderWarnings() {
+    const warnings = [];
+    if (!state.settings.WELCOME_DECK_ID) warnings.push('Welcome deck ID is blank.');
+    if (state.settings.SLACK_ENABLED === 'TRUE' && state.settings.SLACK_TOKEN_STATUS !== 'Set') warnings.push('Slack lookup is enabled, but Slack token is not set.');
+    const box = qs('#warnings');
+    if (!warnings.length) {
+      box.classList.add('hidden');
+      return;
+    }
+    box.classList.remove('hidden');
+    box.innerHTML = `<strong>Setup notes</strong><ul>${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`;
+  }
+
+  function renderQueue() {
+    const rows = filteredRows();
+    const list = qs('#queueList');
+    if (!rows.length) {
+      list.innerHTML = '<div class="queue-card">No matching new hires. Run Sync queue or adjust filters.</div>';
+      return;
+    }
+    list.innerHTML = rows.map(row => {
+      const selected = row['Queue ID'] === state.selectedQueueId ? ' selected' : '';
+      return `
+        <article class="queue-card${selected}" data-id="${escapeAttr(row['Queue ID'])}">
+          <div class="card-row">
+            <div class="queue-name">${escapeHtml(row['Employee Name'])}</div>
+            ${statusBadge(row)}
+          </div>
+          <div class="meta">${escapeHtml(formatStart(row))} · ${escapeHtml(row.Title || 'Title missing')}</div>
+          <div class="meta">${escapeHtml(row['Photo Status'] || 'Needs Photo')}</div>
+        </article>`;
+    }).join('');
+    list.querySelectorAll('.queue-card').forEach(card => {
+      card.addEventListener('click', () => {
+        state.selectedQueueId = card.dataset.id;
+        renderQueue();
+        renderDetail();
+      });
+    });
+  }
+
+  function renderDetail() {
+    const row = selectedRow();
+    const panel = qs('#detailPanel');
+    if (!row) {
+      panel.className = 'detail-panel empty';
+      panel.textContent = 'Select a new hire to review photo candidates and build their welcome slide.';
+      return;
+    }
+    panel.className = 'detail-panel';
+    const candidates = parseJson(row['Photo Candidates JSON'], []);
+    panel.innerHTML = `
+      <div class="card-row">
+        <div>
+          <h2>${escapeHtml(row['Employee Name'])}</h2>
+          <div class="meta">${escapeHtml(row.Title || 'Title missing')} · ${escapeHtml(formatStart(row))}</div>
+          <div class="meta">${escapeHtml(row.Email || '')}</div>
+        </div>
+        ${statusBadge(row)}
+      </div>
+
+      <div class="section highlight">
+        <div class="card-row">
+          <div>
+            <h2>Photo review</h2>
+            <div class="meta">Search Gmail replies first. Slack is optional and controlled in Settings.</div>
+          </div>
+          <button id="findOneBtn" class="btn primary">Find photo</button>
+        </div>
+        <div id="candidates">${renderCandidates(row, candidates)}</div>
+      </div>
+
+      <div class="section">
+        <h2>Preview</h2>
+        <div id="photoPreview" class="preview">${row['Photo Status'] === 'Photo Approved' ? 'Photo approved. Select a candidate to preview again.' : 'Select a candidate to preview.'}</div>
+      </div>
+
+      <div class="section">
+        <h2>Deck actions</h2>
+        <div class="button-row">
+          <button id="buildSlideBtn" class="btn primary">Build welcome slide</button>
+          <button id="updateCollageOneBtn" class="btn">Update monthly collage</button>
+        </div>
+        <div class="meta">Welcome slide: ${escapeHtml(row['Slide Status'] || 'Queued')} ${row['Welcome Slide ID'] ? '· ' + escapeHtml(row['Welcome Slide ID']) : ''}</div>
+      </div>
+
+      ${row.Error ? `<div class="section"><strong>Error</strong><p>${escapeHtml(row.Error)}</p></div>` : ''}
+    `;
+    qs('#findOneBtn').addEventListener('click', () => runAction('findPhotosForOneQueue', [row['Queue ID']], 'Photo search complete.'));
+    qs('#buildSlideBtn').addEventListener('click', () => runAction('buildWelcomeSlide', [row['Queue ID']], 'Welcome slide built.'));
+    qs('#updateCollageOneBtn').addEventListener('click', () => runAction('updateCollageSlideForMonth', [state.month, state.year], 'Collage updated.'));
+    panel.querySelectorAll('[data-preview]').forEach(button => {
+      button.addEventListener('click', () => previewCandidate(row['Queue ID'], button.dataset.preview));
+    });
+    panel.querySelectorAll('[data-approve]').forEach(button => {
+      button.addEventListener('click', () => runAction('approvePhotoCandidate', [row['Queue ID'], button.dataset.approve], 'Photo approved.'));
+    });
+  }
+
+  function renderCandidates(row, candidates) {
+    if (!candidates.length) return '<p class="meta">No candidates loaded yet.</p>';
+    return candidates.map(candidate => `
+      <div class="candidate">
+        <div>
+          <strong>${escapeHtml(candidate.label || candidate.source)}</strong>
+          <div class="meta">${escapeHtml(candidate.source)} · ${escapeHtml(candidate.fileName || '')}</div>
+          <div class="meta">${escapeHtml(candidate.subject || candidate.sentDate || '')}</div>
+        </div>
+        <div class="button-row">
+          <button class="btn" data-preview="${escapeAttr(candidate.id)}">Preview</button>
+          <button class="btn primary" data-approve="${escapeAttr(candidate.id)}">Approve</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function previewCandidate(queueId, candidateId) {
+    const preview = qs('#photoPreview');
+    preview.innerHTML = '<span class="spinner"></span>';
+    server('getPhotoPreview', [queueId, candidateId])
+      .then(response => {
+        preview.innerHTML = `<img src="${escapeAttr(response.data.previewUrl)}" alt="Photo preview">`;
+      })
+      .catch(error => {
+        preview.textContent = error.message || String(error);
+      });
+  }
+
+  function renderSettings() {
+    const keys = [
+      'COMPANY_NAME', 'WELCOME_DECK_ID', 'TEMPLATE_SLIDE_OBJECT_ID', 'TEMPLATE_SLIDE_INDEX',
+      'COLLAGE_SLIDE_OBJECT_ID', 'GMAIL_SEARCH_MONTHS_BACK', 'GMAIL_SUBJECT_KEYWORDS',
+      'PHOTO_LEFT_PT', 'PHOTO_TOP_PT', 'PHOTO_WIDTH_PT', 'PHOTO_HEIGHT_PT', 'COLLAGE_COLUMNS'
+    ];
+    keys.forEach(key => {
+      const input = qs('#' + key);
+      if (input) input.value = state.settings[key] || '';
+    });
+    qs('#DRY_RUN').checked = String(state.settings.DRY_RUN).toUpperCase() === 'TRUE';
+    qs('#SLACK_ENABLED').checked = String(state.settings.SLACK_ENABLED).toUpperCase() === 'TRUE';
+    qs('#slackTokenStatus').textContent = state.settings.SLACK_TOKEN_STATUS || 'Not Set';
+    qs('#slackTokenInput').value = '';
+  }
+
+  function saveSettings() {
+    const settings = {};
+    document.querySelectorAll('#settingsTab input[id]').forEach(input => {
+      if (input.id === 'slackTokenInput') return;
+      if (input.type === 'checkbox') settings[input.id] = input.checked ? 'TRUE' : 'FALSE';
+      else settings[input.id] = input.value;
+    });
+    runAction('saveWelcomeSettings', [settings], 'Settings saved.');
+  }
+
+  function saveSlackToken() {
+    const token = qs('#slackTokenInput').value.trim();
+    if (!token) {
+      toast('Paste a Slack token first.', true);
+      return;
+    }
+    runAction('setSlackToken', [token], 'Slack token saved.');
+  }
+
+  function clearSlackToken() {
+    runAction('clearSlackToken', [], 'Slack token cleared.');
+  }
+
+  function runAction(method, args, successMessage) {
+    setBusy(true);
+    server(method, args || [])
+      .then(response => {
+        toast(response.message || successMessage || 'Done.');
+        refreshState();
+      })
+      .catch(error => toast(error.message || String(error), true))
+      .finally(() => setBusy(false));
+  }
+
+  function server(method, args) {
+    return new Promise((resolve, reject) => {
+      const runner = google.script.run
+        .withSuccessHandler(response => {
+          if (!response || response.ok === false) {
+            reject(new Error(response && response.message || 'Action failed.'));
+            return;
+          }
+          resolve(response);
+        })
+        .withFailureHandler(error => reject(error));
+      runner[method].apply(runner, args || []);
+    });
+  }
+
+  function filteredRows() {
+    return state.rows.filter(row => {
+      const haystack = [row['Employee Name'], row.Title, row.Email, row.Department].join(' ').toLowerCase();
+      if (state.search && haystack.indexOf(state.search) === -1) return false;
+      if (state.filter === 'all') return true;
+      if (state.filter === 'photo') return row['Photo Status'] !== 'Photo Approved';
+      if (state.filter === 'approved') return row['Photo Status'] === 'Photo Approved' && row['Slide Status'] !== 'Added to Deck';
+      if (state.filter === 'done') return row['Slide Status'] === 'Added to Deck';
+      return row['Slide Status'] !== 'Added to Deck';
+    });
+  }
+
+  function summarizeRows(rows) {
+    return rows.reduce((summary, row) => {
+      summary.total++;
+      if (row['Photo Status'] !== 'Photo Approved') summary.needsPhoto++;
+      if (row['Photo Status'] === 'Candidates Found') summary.candidatesFound++;
+      if (row['Photo Status'] === 'Photo Approved') summary.photoApproved++;
+      if (row['Slide Status'] === 'Added to Deck') summary.slidesAdded++;
+      return summary;
+    }, { total: 0, needsPhoto: 0, candidatesFound: 0, photoApproved: 0, slidesAdded: 0 });
+  }
+
+  function selectedRow() {
+    return state.rows.find(row => row['Queue ID'] === state.selectedQueueId) || null;
+  }
+
+  function statusBadge(row) {
+    const photo = row['Photo Status'] || 'Needs Photo';
+    const slide = row['Slide Status'] || 'Queued';
+    let cls = '';
+    if (slide === 'Added to Deck') cls = 'ok';
+    else if (photo === 'Candidates Found') cls = 'warn';
+    else if (photo === 'Error' || slide === 'Error') cls = 'error';
+    return `<span class="badge ${cls}">${escapeHtml(slide === 'Added to Deck' ? 'Slide built' : photo)}</span>`;
+  }
+
+  function formatStart(row) {
+    const value = String(row['Start Date'] || '');
+    if (!value) return 'Start date missing';
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value;
+    return MONTHS[date.getMonth()] + ' ' + date.getDate();
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === tabName));
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+    qs('#' + tabName + 'Tab').classList.add('active');
+  }
+
+  function setBusy(isBusy) {
+    qs('#busy').classList.toggle('hidden', !isBusy);
+    document.querySelectorAll('button').forEach(button => button.disabled = isBusy);
+  }
+
+  function toast(message, isError) {
+    const box = qs('#toast');
+    box.textContent = message;
+    box.className = 'toast ' + (isError ? 'error' : 'success');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => box.classList.add('hidden'), 4200);
+  }
+
+  function parseJson(value, fallback) {
+    try {
+      return JSON.parse(value || JSON.stringify(fallback));
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function qs(selector) {
+    return document.querySelector(selector);
+  }
+
+  function escapeHtml(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
+  }
+</script>

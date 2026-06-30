@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('SidebarCss'); ?>
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <div class="eyebrow">Controlled HR workspace</div>
+          <h1>Welcome Deck Assistant</h1>
+        </div>
+        <div id="busy" class="busy hidden"><span class="spinner"></span></div>
+      </header>
+
+      <section class="toolbar">
+        <label>
+          Month
+          <select id="monthSelect"></select>
+        </label>
+        <label>
+          Year
+          <select id="yearSelect"></select>
+        </label>
+        <button id="syncBtn" class="btn primary">Sync queue</button>
+        <button id="findAllBtn" class="btn">Find photos</button>
+        <button id="buildAllBtn" class="btn">Build slides</button>
+        <button id="collageBtn" class="btn">Update collage</button>
+      </section>
+
+      <section id="summary" class="summary"></section>
+      <section id="warnings" class="warnings hidden"></section>
+
+      <nav class="tabs">
+        <button class="tab active" data-tab="review">Review</button>
+        <button class="tab" data-tab="settings">Settings</button>
+        <button class="tab" data-tab="help">Help</button>
+      </nav>
+
+      <section id="reviewTab" class="tab-panel active">
+        <aside class="queue-pane">
+          <input id="searchInput" class="search" placeholder="Search new hire or title">
+          <div class="chips">
+            <button class="chip active" data-filter="active">Active</button>
+            <button class="chip" data-filter="photo">Needs photo</button>
+            <button class="chip" data-filter="approved">Photo approved</button>
+            <button class="chip" data-filter="done">Slides built</button>
+            <button class="chip" data-filter="all">All</button>
+          </div>
+          <div id="queueList" class="queue-list"></div>
+        </aside>
+
+        <section id="detailPanel" class="detail-panel empty">
+          Select a new hire to review photo candidates and build their welcome slide.
+        </section>
+      </section>
+
+      <section id="settingsTab" class="tab-panel">
+        <div class="settings-grid">
+          <label>Company name <input id="COMPANY_NAME"></label>
+          <label>Welcome deck ID <input id="WELCOME_DECK_ID"></label>
+          <label>Template slide ID <input id="TEMPLATE_SLIDE_OBJECT_ID" placeholder="Optional"></label>
+          <label>Template slide index <input id="TEMPLATE_SLIDE_INDEX" type="number" min="0"></label>
+          <label>Collage slide ID <input id="COLLAGE_SLIDE_OBJECT_ID" placeholder="Optional"></label>
+          <label>Gmail search months back <input id="GMAIL_SEARCH_MONTHS_BACK" type="number" min="1"></label>
+          <label>Gmail keywords <input id="GMAIL_SUBJECT_KEYWORDS"></label>
+          <label>Photo left <input id="PHOTO_LEFT_PT" type="number"></label>
+          <label>Photo top <input id="PHOTO_TOP_PT" type="number"></label>
+          <label>Photo width <input id="PHOTO_WIDTH_PT" type="number"></label>
+          <label>Photo height <input id="PHOTO_HEIGHT_PT" type="number"></label>
+          <label>Collage columns <input id="COLLAGE_COLUMNS" type="number" min="1"></label>
+          <label class="check"><input id="DRY_RUN" type="checkbox"> Dry-run mode</label>
+          <label class="check"><input id="SLACK_ENABLED" type="checkbox"> Enable Slack lookup</label>
+          <div class="token-box">
+            <strong>Slack token</strong>
+            <span id="slackTokenStatus">Not Set</span>
+            <input id="slackTokenInput" type="password" placeholder="Paste Slack bot token">
+            <div class="button-row">
+              <button id="saveSlackBtn" class="btn">Save token</button>
+              <button id="clearSlackBtn" class="btn danger">Clear</button>
+            </div>
+          </div>
+        </div>
+        <button id="saveSettingsBtn" class="btn primary wide">Save settings</button>
+      </section>
+
+      <section id="helpTab" class="tab-panel help">
+        <h2>How this works</h2>
+        <p>Generate the monthly queue from the New Hires tab. Find photo candidates from Gmail and optional Slack profile photos. HR approves one photo, then the app creates the employee welcome slide and updates the collage.</p>
+        <p>The app does not send employee emails and does not automate a browser. Gmail search, Slack lookup, and Slides edits are explicit HR actions.</p>
+      </section>
+    </main>
+    <div id="toast" class="toast hidden"></div>
+    <?!= include('SidebarJs'); ?>
+  </body>
+</html>
