@@ -29,6 +29,7 @@
         <button id="collageBtn" class="btn">Update collage</button>
       </section>
 
+      <section id="safetyBanner" class="safety-banner"></section>
       <section id="summary" class="summary"></section>
       <section id="warnings" class="warnings hidden"></section>
 
@@ -60,6 +61,7 @@
         <div class="settings-grid">
           <label>Company name <input id="COMPANY_NAME"></label>
           <label>Welcome deck ID <input id="WELCOME_DECK_ID"></label>
+          <label>Draft/test deck ID <input id="WELCOME_DECK_DRAFT_ID"></label>
           <label>Template slide ID <input id="TEMPLATE_SLIDE_OBJECT_ID" placeholder="Optional"></label>
           <label>Template slide index <input id="TEMPLATE_SLIDE_INDEX" type="number" min="0"></label>
           <label>Collage slide ID <input id="COLLAGE_SLIDE_OBJECT_ID" placeholder="Optional"></label>
@@ -70,8 +72,23 @@
           <label>Photo width <input id="PHOTO_WIDTH_PT" type="number"></label>
           <label>Photo height <input id="PHOTO_HEIGHT_PT" type="number"></label>
           <label>Collage columns <input id="COLLAGE_COLUMNS" type="number" min="1"></label>
-          <label class="check"><input id="DRY_RUN" type="checkbox"> Dry-run mode</label>
           <label class="check"><input id="SLACK_ENABLED" type="checkbox"> Enable Slack lookup</label>
+          <div class="mode-box">
+            <strong>Protected operating modes</strong>
+            <p class="meta">Safe defaults are TEST / MOCK / SIMULATE. LIVE output requires an explicit arming phrase and each production write requires its exact target confirmation.</p>
+            <div class="mode-grid">
+              <label>Data
+                <select id="protectedDataMode"><option>TEST</option><option>LIVE</option></select>
+              </label>
+              <label>Discovery
+                <select id="protectedDiscoveryMode"><option>MOCK</option><option>LIVE</option></select>
+              </label>
+              <label>Output
+                <select id="protectedOutputMode"><option>SIMULATE</option><option>CAPTURE</option><option>DRAFT</option><option>LIVE</option></select>
+              </label>
+            </div>
+            <button id="saveModesBtn" class="btn">Apply protected modes</button>
+          </div>
           <div class="token-box">
             <strong>Slack token</strong>
             <span id="slackTokenStatus">Not Set</span>

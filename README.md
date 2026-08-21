@@ -23,7 +23,9 @@ It does **not** send employee emails and does **not** automate a browser.
 - `Photos.gs` - Gmail photo discovery, Slack lookup, photo approval.
 - `Slides.gs` - Welcome slide creation and collage update.
 - `Sidebar.html`, `SidebarCss.html`, `SidebarJs.html` - Browser UI.
-- `Tests.gs` - Manual dry-run tests.
+- `OutboundModes.gs` - Protected modes, provider gates, provenance, capture ledger, and readiness.
+- `AgentQa.gs` - Run-owned ten-employee capture QA and persisted evidence inspection.
+- `Tests.gs` - Manual provider-free tests.
 
 ## Setup
 
@@ -34,8 +36,26 @@ It does **not** send employee emails and does **not** automate a browser.
 5. Open **Welcome Deck > Setup / Repair Workbook**.
 6. Add new hires to the `New Hires` sheet.
 7. Open **Welcome Deck > Open Workspace**.
-8. Set `WELCOME_DECK_ID` and template slide settings.
-9. Keep `DRY_RUN = TRUE` until the deck layout is confirmed.
+8. Set `WELCOME_DECK_ID` and template slide settings. Use
+   `WELCOME_DECK_DRAFT_ID` for a test-only deck.
+9. Keep the protected defaults `DATA TEST / DISCOVERY MOCK / OUTPUT SIMULATE`
+   until each higher-risk mode is intentionally enabled in the sidebar.
+
+## Protected operating modes
+
+The spreadsheet's legacy `DRY_RUN` cell is display-only and is not a safety
+control. Authoritative modes live in Script Properties and are shown
+persistently in the sidebar:
+
+- `DATA TEST|LIVE` separates run-owned fixtures from employee records.
+- `DISCOVERY MOCK|LIVE` independently controls Gmail and Slack reads.
+- `OUTPUT SIMULATE|CAPTURE|DRAFT|LIVE` independently controls Slides writes.
+
+`SIMULATE` and `CAPTURE` never open a Slides deck. Capture creates an auditable
+receipt in `Output Captures` and uses `Captured`, never `Added to Deck`.
+`DRAFT` writes only to `WELCOME_DECK_DRAFT_ID`. `LIVE` requires both the phrase
+`ENABLE LIVE DECK OUTPUT` when modes are changed and an employee/deck-specific
+confirmation for every production slide.
 
 ## Slide Template
 
@@ -93,7 +113,13 @@ The Slack token is stored only in Script Properties, never in the spreadsheet.
 - No browser automation or Slack scraping is used.
 - No employee emails are sent by this app.
 
-## Manual Tests
+## QA
+
+Run the named local checks:
+
+```powershell
+npm run check
+```
 
 From Apps Script, run:
 
@@ -101,7 +127,20 @@ From Apps Script, run:
 runWelcomeDeckAssistantTests()
 ```
 
-The tests force dry-run behavior and avoid real Gmail, Slack, or Slides writes.
+For the persisted ten-employee proof, run:
+
+```js
+runAgentWelcomeDeckCaptureQa10()
+inspectLatestAgentWelcomeDeckCaptureQa()
+listAgentWelcomeDeckQaRuns()
+cleanupAgentWelcomeDeckCaptureQa('EXACT_RUN_ID')
+```
+
+The fixture uses ten unique `example.invalid` employees in
+`TEST / MOCK / CAPTURE`, verifies 20 linked and unique capture receipts
+(10 welcome-slide plus 10 collage-member), and records
+`Provider Contacted=FALSE`. Cleanup deletes only rows bearing that exact test
+run ID. These checks do not prove Gmail, Slack, or Slides provider readiness.
 
 ## Deployment With Clasp
 

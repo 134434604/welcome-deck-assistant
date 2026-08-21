@@ -9,6 +9,7 @@
     year: new Date().getFullYear(),
     rows: [],
     settings: {},
+    safety: {},
     selectedQueueId: '',
     filter: 'active',
     search: ''
@@ -54,7 +55,7 @@
     qs('#syncBtn').addEventListener('click', () => runAction('generateWelcomeQueue', [state.month, state.year], 'Queue synced.'));
     qs('#findAllBtn').addEventListener('click', () => runAction('findPhotosForQueue', [state.month, state.year], 'Photo search complete.'));
     qs('#buildAllBtn').addEventListener('click', () => runAction('buildWelcomeSlidesForApproved', [state.month, state.year], 'Slides built.'));
-    qs('#collageBtn').addEventListener('click', () => runAction('updateCollageSlideForMonth', [state.month, state.year], 'Collage updated.'));
+    qs('#collageBtn').addEventListener('click', runCollageAction);
     qs('#searchInput').addEventListener('input', event => {
       state.search = event.target.value.toLowerCase();
       renderQueue();
@@ -71,6 +72,7 @@
       tab.addEventListener('click', () => switchTab(tab.dataset.tab));
     });
     qs('#saveSettingsBtn').addEventListener('click', saveSettings);
+    qs('#saveModesBtn').addEventListener('click', saveProtectedModes);
     qs('#saveSlackBtn').addEventListener('click', saveSlackToken);
     qs('#clearSlackBtn').addEventListener('click', clearSlackToken);
   }
@@ -81,6 +83,7 @@
       .then(response => {
         state.rows = response.data.queueRows || [];
         state.settings = response.data.settings || {};
+        state.safety = response.data.safety || {};
         if (!state.selectedQueueId && state.rows.length) state.selectedQueueId = state.rows[0]['Queue ID'];
         render();
       })
@@ -89,11 +92,29 @@
   }
 
   function render() {
+    renderSafety();
     renderSummary();
     renderWarnings();
     renderQueue();
     renderDetail();
     renderSettings();
+  }
+
+  function renderSafety() {
+    const safety = state.safety || {};
+    const live = safety.outputMode === 'LIVE';
+    qs('#safetyBanner').className = 'safety-banner' + (live ? ' live' : '');
+    qs('#safetyBanner').innerHTML = `
+      <strong>DATA ${escapeHtml(safety.dataMode || 'TEST')}</strong>
+      <strong>DISCOVERY ${escapeHtml(safety.discoveryMode || 'MOCK')}</strong>
+      <strong>OUTPUT ${escapeHtml(safety.outputMode || 'SIMULATE')}</strong>
+      <span>${live && !safety.liveOutputArmed ? 'LIVE is not armed' : escapeHtml(safety.outputProviderReadiness || '')}</span>
+      <span>${escapeHtml(safety.discoveryProviderReadiness || '')}</span>
+      <span>Target ${escapeHtml(safety.effectiveTargetDeckId || 'not configured')}</span>
+      <span>Automation: ${escapeHtml(safety.automationState || 'unknown')}</span>
+      <span>Test run ${escapeHtml(safety.testRunId || 'none')}</span>
+      <span>Pending ${escapeHtml(safety.pendingArtifacts || 0)} · Captures ${escapeHtml(safety.captures || 0)}</span>
+      <span>Last capture ${escapeHtml(safety.lastCaptureReceipt || 'none')} · Last live ${escapeHtml(safety.lastLiveReceipt || 'none')}</span>`;
   }
 
   function renderSummary() {
@@ -200,8 +221,12 @@
       ${row.Error ? `<div class="section"><strong>Error</strong><p>${escapeHtml(row.Error)}</p></div>` : ''}
     `;
     qs('#findOneBtn').addEventListener('click', () => runAction('findPhotosForOneQueue', [row['Queue ID']], 'Photo search complete.'));
-    qs('#buildSlideBtn').addEventListener('click', () => runAction('buildWelcomeSlide', [row['Queue ID']], 'Welcome slide built.'));
-    qs('#updateCollageOneBtn').addEventListener('click', () => runAction('updateCollageSlideForMonth', [state.month, state.year], 'Collage updated.'));
+    qs('#buildSlideBtn').addEventListener('click', () => {
+      const confirmation = productionConfirmationForRow(row);
+      if (confirmation === null) return;
+      runAction('buildWelcomeSlide', [row['Queue ID'], confirmation], 'Welcome slide action complete.');
+    });
+    qs('#updateCollageOneBtn').addEventListener('click', runCollageAction);
     panel.querySelectorAll('[data-preview]').forEach(button => {
       button.addEventListener('click', () => previewCandidate(row['Queue ID'], button.dataset.preview));
     });
@@ -242,6 +267,7 @@
   function renderSettings() {
     const keys = [
       'COMPANY_NAME', 'WELCOME_DECK_ID', 'TEMPLATE_SLIDE_OBJECT_ID', 'TEMPLATE_SLIDE_INDEX',
+      'WELCOME_DECK_DRAFT_ID',
       'COLLAGE_SLIDE_OBJECT_ID', 'GMAIL_SEARCH_MONTHS_BACK', 'GMAIL_SUBJECT_KEYWORDS',
       'PHOTO_LEFT_PT', 'PHOTO_TOP_PT', 'PHOTO_WIDTH_PT', 'PHOTO_HEIGHT_PT', 'COLLAGE_COLUMNS'
     ];
@@ -249,10 +275,41 @@
       const input = qs('#' + key);
       if (input) input.value = state.settings[key] || '';
     });
-    qs('#DRY_RUN').checked = String(state.settings.DRY_RUN).toUpperCase() === 'TRUE';
     qs('#SLACK_ENABLED').checked = String(state.settings.SLACK_ENABLED).toUpperCase() === 'TRUE';
+    qs('#protectedDataMode').value = state.safety.dataMode || 'TEST';
+    qs('#protectedDiscoveryMode').value = state.safety.discoveryMode || 'MOCK';
+    qs('#protectedOutputMode').value = state.safety.outputMode || 'SIMULATE';
     qs('#slackTokenStatus').textContent = state.settings.SLACK_TOKEN_STATUS || 'Not Set';
     qs('#slackTokenInput').value = '';
+  }
+
+  function saveProtectedModes() {
+    const dataMode = qs('#protectedDataMode').value;
+    const discoveryMode = qs('#protectedDiscoveryMode').value;
+    const outputMode = qs('#protectedOutputMode').value;
+    let confirmation = '';
+    if (outputMode === 'LIVE') {
+      confirmation = window.prompt('Type ENABLE LIVE DECK OUTPUT to arm production deck writes.') || '';
+      if (!confirmation) return;
+    }
+    runAction('configureWdaSafetyModes', [dataMode, discoveryMode, outputMode, confirmation], 'Protected modes updated.');
+  }
+
+  function productionConfirmationForRow(row) {
+    if (state.safety.outputMode !== 'LIVE') return '';
+    const expected = `PUBLISH ${row.Email || ''} TO ${state.settings.WELCOME_DECK_ID || ''}`;
+    const confirmation = window.prompt(`Type exactly:\n${expected}`);
+    return confirmation === null ? null : confirmation;
+  }
+
+  function runCollageAction() {
+    let confirmation = '';
+    if (state.safety.outputMode === 'LIVE') {
+      const expected = `PUBLISH COLLAGE ${state.month}/${state.year} TO ${state.settings.WELCOME_DECK_ID || ''}`;
+      confirmation = window.prompt(`Type exactly:\n${expected}`);
+      if (confirmation === null) return;
+    }
+    runAction('updateCollageSlideForMonth', [state.month, state.year, confirmation], 'Collage action complete.');
   }
 
   function saveSettings() {

@@ -6,6 +6,7 @@ function setupWorkbookCore_() {
   ensureSheet_(WDA.SHEETS.QUEUE, WDA.HEADERS.QUEUE);
   ensureSheet_(WDA.SHEETS.SETTINGS, WDA.HEADERS.SETTINGS);
   ensureSheet_(WDA.SHEETS.AUDIT, WDA.HEADERS.AUDIT);
+  ensureSheet_(WDA.SHEETS.CAPTURES, WDA.HEADERS.CAPTURES);
   ensureSheet_(WDA.SHEETS.HELP, WDA.HEADERS.HELP);
   seedSettings_();
   seedHelp_();
@@ -13,20 +14,26 @@ function setupWorkbookCore_() {
   applyValidations_();
 }
 
-function generateWelcomeQueue(month, year) {
+function generateWelcomeQueue(month, year, options) {
   return safeResponse_('Generate welcome queue', function () {
+    options = options || {};
+    var scopedEmployeeIds = (options.employeeIds || []).map(normalizeString_);
     setupWorkbookCore_();
     month = normalizeMonth_(month);
     year = normalizeYear_(year);
-    var lock = LockService.getDocumentLock();
-    lock.waitLock(30000);
-    try {
+    return withWdaScriptLock_(function () {
       var newHires = readSheetObjects_(WDA.SHEETS.NEW_HIRES);
+      assertUniqueWdaEmployeeIds_(newHires);
+      var modes = getWdaSafetyModes_();
       var existing = indexBy_(readSheetObjects_(WDA.SHEETS.QUEUE), 'Queue ID');
       var created = 0;
       var updated = 0;
       var skipped = 0;
       newHires.forEach(function (employee) {
+        if (!wdaRecordInActiveScope_(employee, modes)) {
+          skipped++;
+          return;
+        }
         if (!isActive_(employee.Active)) {
           skipped++;
           return;
@@ -37,6 +44,10 @@ function generateWelcomeQueue(month, year) {
           return;
         }
         var employeeId = normalizeString_(employee['Employee ID']);
+        if (scopedEmployeeIds.length && scopedEmployeeIds.indexOf(employeeId) === -1) {
+          skipped++;
+          return;
+        }
         var email = normalizeString_(employee.Email);
         if (!employeeId || !email) {
           skipped++;
@@ -56,6 +67,8 @@ function generateWelcomeQueue(month, year) {
           Title: normalizeString_(employee.Title),
           Department: normalizeString_(employee.Department),
           'Manager Name': normalizeString_(employee['Manager Name']),
+          'Data Mode': recordWdaDataMode_(employee),
+          'Test Run ID': normalizeString_(employee['Test Run ID']),
           'Updated At': nowIso_()
         };
         if (!current) {
@@ -66,6 +79,20 @@ function generateWelcomeQueue(month, year) {
           writeRowByKey_(WDA.SHEETS.QUEUE, 'Queue ID', queueId, updates);
           created++;
         } else {
+          var identityChanged = wdaQueueSourceIdentityChanged_(current, updates);
+          if (wdaHasArtifactOrPendingState_(current)) {
+            if (identityChanged) {
+              writeRowByKey_(WDA.SHEETS.QUEUE, 'Queue ID', queueId, Object.assign(wdaClearedPhotoState_(), {
+                Error: 'Source identity changed after output; reconcile the preserved artifact before further processing.',
+                'Updated At': nowIso_()
+              }));
+            }
+            skipped++;
+            return;
+          }
+          if (identityChanged) {
+            Object.assign(updates, wdaClearedArtifactState_());
+          }
           writeRowByKey_(WDA.SHEETS.QUEUE, 'Queue ID', queueId, updates);
           updated++;
         }
@@ -77,9 +104,51 @@ function generateWelcomeQueue(month, year) {
         message: 'Queue generated: ' + created + ' created, ' + updated + ' updated.',
         data: { created: created, updated: updated, skipped: skipped }
       };
-    } finally {
-      lock.releaseLock();
-    }
+    });
+  });
+}
+
+function wdaQueueSourceIdentityChanged_(current, updates) {
+  return normalizeString_(current.Email).toLowerCase() !== normalizeString_(updates.Email).toLowerCase() ||
+    normalizeString_(current['Employee Name']).toLowerCase() !== normalizeString_(updates['Employee Name']).toLowerCase() ||
+    normalizeString_(current.Title) !== normalizeString_(updates.Title) ||
+    normalizeString_(current['Data Mode']).toUpperCase() !== normalizeString_(updates['Data Mode']).toUpperCase() ||
+    normalizeString_(current['Test Run ID']).toUpperCase() !== normalizeString_(updates['Test Run ID']).toUpperCase();
+}
+
+function wdaHasArtifactOrPendingState_(row) {
+  return [WDA.SLIDE_STATUSES.CAPTURE_PENDING, WDA.SLIDE_STATUSES.CAPTURED, WDA.SLIDE_STATUSES.ARTIFACT_PENDING, WDA.SLIDE_STATUSES.DRAFT_CREATED, WDA.SLIDE_STATUSES.ADDED, WDA.SLIDE_STATUSES.DELIVERY_UNCONFIRMED].indexOf(normalizeString_(row['Slide Status'])) !== -1 ||
+    [WDA.COLLAGE_STATUSES.CAPTURE_PENDING, WDA.COLLAGE_STATUSES.CAPTURED, WDA.COLLAGE_STATUSES.ARTIFACT_PENDING, WDA.COLLAGE_STATUSES.DRAFT_CREATED, WDA.COLLAGE_STATUSES.PUBLISHED, WDA.COLLAGE_STATUSES.DELIVERY_UNCONFIRMED].indexOf(normalizeString_(row['Collage Status'])) !== -1;
+}
+
+function wdaClearedPhotoState_() {
+  return {
+    'Photo Status': WDA.PHOTO_STATUSES.NEEDS_PHOTO,
+    'Photo Source': '',
+    'Photo Candidates JSON': '',
+    'Selected Photo JSON': '',
+    'Approved Photo File ID': '',
+    'Approved Photo URL': '',
+    'Approved By': '',
+    'Approved At': ''
+  };
+}
+
+function wdaClearedArtifactState_() {
+  return Object.assign(wdaClearedPhotoState_(), {
+    'Slide Status': WDA.SLIDE_STATUSES.QUEUED,
+    'Welcome Slide ID': '',
+    'Output Mode': '',
+    'Output Receipt': '',
+    'Output Provider Contacted': '',
+    'Target Deck ID': '',
+    'Collage Status': '',
+    'Collage Receipt': '',
+    'Collage Slide ID': '',
+    'Collage Output Mode': '',
+    'Collage Target Deck ID': '',
+    'Collage Provider Contacted': '',
+    Error: ''
   });
 }
 
@@ -169,6 +238,8 @@ function seedSampleNewHire_() {
     'Slack User ID': '',
     Notes: 'Sample row. Replace with real employee data.',
     'Last Updated': nowIso_()
+    ,'Data Mode': 'TEST'
+    ,'Test Run ID': 'WDA-SAMPLE'
   }]);
 }
 
@@ -432,7 +503,20 @@ function pad2_(value) {
 
 function getActorEmail_() {
   try {
-    return Session.getActiveUser().getEmail() || '';
+    var active = Session.getActiveUser().getEmail() || '';
+    if (active) return active;
+    return Session.getEffectiveUser().getEmail() || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function getActorIdentity_() {
+  var email = getActorEmail_();
+  if (email) return email;
+  try {
+    var key = Session.getTemporaryActiveUserKey() || '';
+    return key ? 'google-user-key:' + key : '';
   } catch (error) {
     return '';
   }

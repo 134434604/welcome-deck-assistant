@@ -7,11 +7,18 @@ var WDA = {
   APP_NAME: 'Welcome Deck Assistant',
   MENU_NAME: 'Welcome Deck',
   VERSION: 'welcome-deck-v1',
+  PROP_DATA_MODE: 'WDA_DATA_MODE',
+  PROP_DISCOVERY_MODE: 'WDA_DISCOVERY_MODE',
+  PROP_OUTPUT_MODE: 'WDA_OUTPUT_MODE',
+  PROP_LIVE_OUTPUT_ARMED: 'WDA_LIVE_OUTPUT_ARMED',
+  PROP_TEST_RUN_ID: 'WDA_TEST_RUN_ID',
+  PROP_LAST_AGENT_QA_RUN_ID: 'WDA_LAST_AGENT_QA_RUN_ID',
   SHEETS: {
     NEW_HIRES: 'New Hires',
     QUEUE: 'Welcome Queue',
     SETTINGS: 'Settings',
     AUDIT: 'Audit Log',
+    CAPTURES: 'Output Captures',
     HELP: 'Help'
   },
   HEADERS: {
@@ -30,7 +37,9 @@ var WDA = {
       'Slack Email',
       'Slack User ID',
       'Notes',
-      'Last Updated'
+      'Last Updated',
+      'Data Mode',
+      'Test Run ID'
     ],
     QUEUE: [
       'Queue ID',
@@ -52,12 +61,23 @@ var WDA = {
       'Slide Status',
       'Welcome Slide ID',
       'Collage Status',
+      'Collage Receipt',
+      'Collage Slide ID',
+      'Collage Output Mode',
+      'Collage Target Deck ID',
+      'Collage Provider Contacted',
       'HR Notes',
       'Created At',
       'Updated At',
       'Approved By',
       'Approved At',
-      'Error'
+      'Error',
+      'Output Mode',
+      'Output Receipt',
+      'Output Provider Contacted',
+      'Target Deck ID',
+      'Data Mode',
+      'Test Run ID'
     ],
     SETTINGS: ['Key', 'Value', 'Description'],
     AUDIT: [
@@ -71,6 +91,24 @@ var WDA = {
       'Details',
       'Error'
     ],
+    CAPTURES: [
+      'Capture ID',
+      'Capture Run ID',
+      'Timestamp',
+      'Test Run ID',
+      'Queue ID',
+      'Employee ID',
+      'Employee Name',
+      'Employee Email',
+      'Artifact Type',
+      'Target Deck ID',
+      'Payload JSON',
+      'Data Mode',
+      'Discovery Mode',
+      'Output Mode',
+      'Provider Contacted',
+      'Actor Identity'
+    ],
     HELP: ['Topic', 'Instructions']
   },
   PHOTO_STATUSES: {
@@ -83,8 +121,23 @@ var WDA = {
   SLIDE_STATUSES: {
     QUEUED: 'Queued',
     READY: 'Ready for Slide',
+    SIMULATED: 'Simulated',
+    CAPTURE_PENDING: 'Capture Pending',
+    CAPTURED: 'Captured',
+    ARTIFACT_PENDING: 'Artifact Pending',
+    DRAFT_CREATED: 'Draft Artifact Created',
     ADDED: 'Added to Deck',
+    DELIVERY_UNCONFIRMED: 'Artifact Unconfirmed',
     ERROR: 'Error'
+  },
+  COLLAGE_STATUSES: {
+    SIMULATED: 'Simulated',
+    CAPTURE_PENDING: 'Capture Pending',
+    CAPTURED: 'Captured',
+    ARTIFACT_PENDING: 'Artifact Pending',
+    DRAFT_CREATED: 'Draft Artifact Created',
+    PUBLISHED: 'Published to Deck',
+    DELIVERY_UNCONFIRMED: 'Artifact Unconfirmed'
   },
   PHOTO_SOURCES: {
     GMAIL: 'Gmail',
@@ -95,6 +148,7 @@ var WDA = {
   DEFAULT_SETTINGS: {
     COMPANY_NAME: '',
     WELCOME_DECK_ID: '',
+    WELCOME_DECK_DRAFT_ID: '',
     TEMPLATE_SLIDE_OBJECT_ID: '',
     TEMPLATE_SLIDE_INDEX: '0',
     COLLAGE_SLIDE_OBJECT_ID: '',
@@ -120,6 +174,7 @@ var WDA = {
   SETTING_DESCRIPTIONS: {
     COMPANY_NAME: 'Company name shown on welcome slides when the template uses {{COMPANY}}.',
     WELCOME_DECK_ID: 'Google Slides deck ID where welcome slides are created.',
+    WELCOME_DECK_DRAFT_ID: 'Optional test-only Slides deck used by protected OUTPUT DRAFT mode.',
     TEMPLATE_SLIDE_OBJECT_ID: 'Optional specific template slide object ID. Leave blank to use TEMPLATE_SLIDE_INDEX.',
     TEMPLATE_SLIDE_INDEX: 'Zero-based slide index to duplicate as the employee welcome slide template.',
     COLLAGE_SLIDE_OBJECT_ID: 'Optional collage slide object ID. If blank, the app creates a new collage slide.',
@@ -127,7 +182,7 @@ var WDA = {
     GMAIL_SEARCH_MONTHS_BACK: 'How far back Gmail photo search should look.',
     GMAIL_SUBJECT_KEYWORDS: 'Comma-separated words to help find employee photo replies.',
     SLACK_ENABLED: 'TRUE/FALSE. Enables Slack profile photo lookup when a Slack token is set.',
-    DRY_RUN: 'TRUE/FALSE. TRUE avoids real Gmail, Slack, Drive, and Slides changes where possible.',
+    DRY_RUN: 'Legacy display-only value. Protected Script Properties control data, discovery, and output modes.',
     PHOTO_LEFT_PT: 'Photo placement left coordinate in slide points.',
     PHOTO_TOP_PT: 'Photo placement top coordinate in slide points.',
     PHOTO_WIDTH_PT: 'Photo placement width in slide points.',

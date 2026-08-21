@@ -115,6 +115,24 @@
     border-bottom: 1px solid var(--line);
   }
 
+  .safety-banner {
+    display: flex;
+    gap: 10px 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 28px;
+    color: #174b45;
+    background: #e9f7f4;
+    border-bottom: 1px solid #9dd7cf;
+    font-size: 12px;
+  }
+
+  .safety-banner.live {
+    color: #754000;
+    background: #fff4df;
+    border-color: #f5bd66;
+  }
+
   .metric {
     padding: 9px 13px;
     border-radius: 999px;
@@ -333,6 +351,21 @@
     border-radius: 8px;
     padding: 14px;
     background: #f8fafc;
+  }
+
+  .mode-box {
+    grid-column: 1 / -1;
+    border: 1px solid #9dd7cf;
+    border-radius: 8px;
+    padding: 14px;
+    background: #f0faf8;
+  }
+
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0;
   }
 
   .help {

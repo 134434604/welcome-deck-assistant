@@ -5,12 +5,15 @@
  */
 function findPhotosForQueue(month, year, queueIdsOptional) {
   return safeResponse_('Find photos', function () {
+    return withWdaScriptLock_(function () {
     setupWorkbookCore_();
     var settings = getSettings_();
     month = normalizeMonth_(month);
     year = normalizeYear_(year);
     var queueIds = queueIdsOptional || [];
+    var modes = getWdaSafetyModes_();
     var rows = readSheetObjects_(WDA.SHEETS.QUEUE).filter(function (row) {
+      if (!wdaRecordInActiveScope_(row, modes)) return false;
       if (queueIds.length) return queueIds.indexOf(row['Queue ID']) !== -1;
       return Number(row.Year) === year && Number(row['Start Month']) === month;
     });
@@ -19,6 +22,7 @@ function findPhotosForQueue(month, year, queueIdsOptional) {
     var errors = 0;
     rows.forEach(function (row) {
       try {
+        assertWdaQueueIdentity_(row);
         var result = findPhotoCandidatesForRow_(row, settings);
         var statusBefore = row['Photo Status'];
         var updates = {
@@ -52,14 +56,18 @@ function findPhotosForQueue(month, year, queueIdsOptional) {
       message: 'Photo search complete: ' + found + ' with candidates, ' + notFound + ' not found, ' + errors + ' errors.',
       data: { found: found, notFound: notFound, errors: errors }
     };
+    });
   });
 }
 
-function findPhotosForOneQueue(queueId) {
+function findPhotosForOneQueue(queueId, options) {
   return safeResponse_('Find photo for row', function () {
-    setupWorkbookCore_();
+    return withWdaScriptLock_(function () {
+    if (!(options && options.skipSetup === true)) setupWorkbookCore_();
     var row = getQueueRowById_(queueId);
     if (!row) throw new Error('Queue row not found.');
+    assertWdaDataModeAllows_(row);
+    assertWdaQueueIdentity_(row);
     var result = findPhotoCandidatesForRow_(row, getSettings_());
     writeRowByKey_(WDA.SHEETS.QUEUE, 'Queue ID', queueId, {
       'Photo Candidates JSON': JSON.stringify(result.candidates),
@@ -72,14 +80,18 @@ function findPhotosForOneQueue(queueId) {
       message: result.candidates.length ? 'Photo candidates found.' : 'No photo candidates found.',
       data: { candidates: result.candidates }
     };
+    });
   });
 }
 
-function approvePhotoCandidate(queueId, candidateId) {
+function approvePhotoCandidate(queueId, candidateId, options) {
   return safeResponse_('Approve photo candidate', function () {
-    setupWorkbookCore_();
+    return withWdaScriptLock_(function () {
+    if (!(options && options.skipSetup === true)) setupWorkbookCore_();
     var row = getQueueRowById_(queueId);
     if (!row) throw new Error('Queue row not found.');
+    assertWdaDataModeAllows_(row);
+    assertWdaQueueIdentity_(row);
     var candidates = parseJsonArray_(row['Photo Candidates JSON']);
     var candidate = null;
     candidates.forEach(function (item) {
@@ -105,20 +117,24 @@ function approvePhotoCandidate(queueId, candidateId) {
       details: candidate.source + ' candidate approved.'
     });
     return { message: 'Photo approved.', data: { candidate: candidate } };
+    });
   });
 }
 
 function getPhotoPreview(queueId, candidateId) {
   return safeResponse_('Get photo preview', function () {
+    return withWdaScriptLock_(function () {
     var row = getQueueRowById_(queueId);
     if (!row) throw new Error('Queue row not found.');
+    assertWdaDataModeAllows_(row);
+    assertWdaQueueIdentity_(row);
     var candidates = parseJsonArray_(row['Photo Candidates JSON']);
     var candidate = null;
     candidates.forEach(function (item) {
       if (item.id === candidateId) candidate = item;
     });
     if (!candidate) throw new Error('Photo candidate not found.');
-    if (candidate.previewUrl) {
+    if (candidate.previewUrl && candidate.source !== WDA.PHOTO_SOURCES.SLACK) {
       return { message: 'Preview ready.', data: { previewUrl: candidate.previewUrl } };
     }
     var blob = getPhotoBlobForCandidate_(candidate);
@@ -128,11 +144,13 @@ function getPhotoPreview(queueId, candidateId) {
         previewUrl: 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes())
       }
     };
+    });
   });
 }
 
 function findPhotoCandidatesForRow_(row, settings) {
-  if (String(settings.DRY_RUN).toUpperCase() === 'TRUE') {
+  var modes = getWdaSafetyModes_();
+  if (modes.discoveryMode === 'MOCK') {
     return {
       candidates: [{
         id: 'dry-run-' + Utilities.getUuid().slice(0, 8),
@@ -156,6 +174,7 @@ function findPhotoCandidatesForRow_(row, settings) {
 }
 
 function findGmailPhotoCandidates_(row, settings) {
+  assertWdaDiscoveryProviderAllowed_('Gmail photo search');
   var email = normalizeString_(row.Email);
   if (!email) throw new Error('Employee email is missing.');
   var monthsBack = Math.max(1, Number(settings.GMAIL_SEARCH_MONTHS_BACK || 18));
@@ -199,6 +218,7 @@ function findGmailPhotoCandidates_(row, settings) {
 }
 
 function findSlackPhotoCandidate_(row) {
+  assertWdaDiscoveryProviderAllowed_('Slack profile lookup');
   var employee = getNewHireByEmployeeId_(row['Employee ID']) || {};
   var email = normalizeString_(employee['Slack Email']) || normalizeString_(row.Email);
   if (!email) return null;
@@ -234,6 +254,7 @@ function getPhotoBlobForCandidate_(candidate) {
     return Utilities.newBlob(makeDemoSvg_(candidate.label || 'Demo'), 'image/svg+xml', 'demo-photo.svg');
   }
   if (candidate.source === WDA.PHOTO_SOURCES.GMAIL) {
+    assertWdaDiscoveryProviderAllowed_('Gmail attachment read');
     var message = GmailApp.getMessageById(candidate.messageId);
     var attachments = message.getAttachments({ includeInlineImages: false, includeAttachments: true });
     var blob = attachments[Number(candidate.attachmentIndex)];
@@ -241,6 +262,7 @@ function getPhotoBlobForCandidate_(candidate) {
     return blob.copyBlob();
   }
   if (candidate.source === WDA.PHOTO_SOURCES.SLACK && candidate.previewUrl) {
+    assertWdaDiscoveryProviderAllowed_('Slack photo download');
     var response = UrlFetchApp.fetch(candidate.previewUrl, { muteHttpExceptions: true });
     if (response.getResponseCode() >= 300) throw new Error('Slack photo could not be fetched.');
     return response.getBlob().setName(candidate.fileName || 'slack-profile.jpg');

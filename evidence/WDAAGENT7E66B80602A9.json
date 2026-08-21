@@ -1,0 +1,71 @@
+{
+  "evidenceVersion": 2,
+  "deployedAt": "2026-07-23T20:19:27-04:00",
+  "executedAt": "2026-07-23T20:22:39-04:00",
+  "executionSurface": "Signed-in Google Apps Script editor",
+  "function": "runAgentWelcomeDeckCaptureQa10",
+  "scriptId": "1RMiDZHDJ-xOgMza_6lVKh8EuOvaDiJZpFLsbBCV0XDaLqu25N3fh-72Z",
+  "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1GUTs3uI4fOuTSglw8H5F-GD5ZNhUoA2MJuRK4D6oIG4/edit",
+  "runId": "WDAAGENT7E66B80602A9",
+  "modes": {
+    "data": "TEST",
+    "discovery": "MOCK",
+    "output": "CAPTURE"
+  },
+  "observedResult": {
+    "ok": true,
+    "message": "Welcome Deck capture QA passed for 10 employees with zero provider contact.",
+    "captureEvidenceValid": true,
+    "providerContacted": false,
+    "employees": 10,
+    "queueRows": 10,
+    "captures": 20,
+    "providerArtifacts": 0
+  },
+  "captureMappings": [
+    {"captureId":"WDA-CAPTURE-9d20416e-40f2-487f-9d32-0f014e340bfe","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-01_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-01","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-aac41ee0-db5b-4e8c-a9f4-d6f2d4d7db08","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-02_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-02","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-a93f7c1f-50b2-407a-8d09-972852b273d7","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-03_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-03","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-d409489d-488b-488d-9150-d9136563ba37","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-04_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-04","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-0b82d0f7-258e-4997-8ee7-ad45b6999484","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-05_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-05","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-b1d262ed-a318-4bbb-b233-eae55eda8194","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-06_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-06","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-d1471152-2b45-4071-a9ee-32af74ddfac5","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-07_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-07","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-ee0248b2-0e93-417b-97ea-beee05edda9b","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-08_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-08","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-6db2e047-732a-462c-a144-ae144361a559","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-09_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-09","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-23cdf8fa-2dbc-41a9-9057-cb1d841fc89f","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-10_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-10","artifactType":"WELCOME_SLIDE","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-50469142-99f5-4efe-be41-a6646d432ab1","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-01_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-01","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-7e79dea9-b053-4cc6-98fe-c1e91f394a48","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-02_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-02","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-6a7cca5b-066f-4cf8-9b5d-97f56343556e","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-03_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-03","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-53e9a579-27b4-4537-97ab-206df5b649e3","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-04_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-04","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-34ea4083-3fea-4da7-a441-c4a5214a0aae","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-05_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-05","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-a180c9c4-3862-4a85-864b-9eb2b48b2a83","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-06_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-06","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-65d4dc1b-6fd4-407c-ad0b-8451699ea5de","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-07_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-07","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-5c6a9b39-5301-471f-801b-28393120e4dd","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-08_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-08","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-7ee52318-4371-45eb-b1d5-08cae5e5c827","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-09_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-09","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"},
+    {"captureId":"WDA-CAPTURE-735e9c90-f739-4b5b-889a-dc82febe94d4","queueId":"TEST-WDA-WDAAGENT7E66B80602A9-10_WELCOME_2026_07","employeeId":"TEST-WDA-WDAAGENT7E66B80602A9-10","artifactType":"COLLAGE_MEMBER","providerContacted":"false","outputMode":"CAPTURE","dataMode":"TEST","testRunId":"WDAAGENT7E66B80602A9"}
+  ],
+  "deployedSourceSha256": {
+    "AgentQa.gs": "9d4f566626b3e8eed6977a6708efa0536921f9362628a95bcf1425edd73762ca",
+    "appsscript.json": "3685ba79f9099ff17c1e7f06f85fa39bbb306bbc690d47a04297c793dfb7e54f",
+    "Code.gs": "6dd22c6da765538e34766ae24fd2406f98923ba5a50dba43859afbc0c8bb0784",
+    "Config.gs": "036224cf371e7b1195d55a428463647622a81cb41eb58580451c6a843cd6e7b8",
+    "OutboundModes.gs": "f00c4262cc69522ea86ef942a16180a78bed9d8130675699ba493b5926a2a787",
+    "Photos.gs": "e5d2f899efea6cba0865eced7785f1f329c57fc6761ba12669c1bc834a7f1400",
+    "Sheets.gs": "4644e2c0dd9700dfc9eb703343ce80e0e982a7efa5378618e86dc1273668c632",
+    "Sidebar.html": "70bf2217fd40db8f52ba1aa29ede164d7d2e5b68f34bc6ae13faa99b3bb7277b",
+    "SidebarCss.html": "1e7b72dc7fed37d55aefc1f186b4b6bda354a36682fefd54b5733eed1e4c164e",
+    "SidebarJs.html": "5127a7f868a405786bca88f383ddcab0c5bae83aec3fb466d1f93bec73ea683d",
+    "Slides.gs": "08d7ae5afedde8b5208c42b4265b6b2c6de1300f0ac6e7a13dfc33fb62c14232",
+    "Tests.gs": "56f865e370a455768e7e4607708a834dd255691efb09fca0a056876351a0ce3f"
+  },
+  "operatorUiEvidence": {
+    "browserChecked": true,
+    "safeBaseline": "DATA TEST / DISCOVERY MOCK / OUTPUT SIMULATE",
+    "testRun": "none",
+    "pendingArtifacts": 0,
+    "target": "not configured",
+    "automation": "No automatic provider output; scheduled paths are provider-free.",
+    "lastLiveReceipt": "none"
+  },
+  "claimBoundary": "This proves deployed TEST/MOCK/CAPTURE persistence for ten employees across individual welcome-slide and collage-member routes with 20 exact queue/type mappings, zero provider contact, and zero provider artifacts. It does not prove live Gmail, Slack, Drive, or Slides readiness or delivery."
+}

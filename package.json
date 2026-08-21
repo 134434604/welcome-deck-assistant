@@ -1,0 +1,10 @@
+{
+  "name": "welcome-deck-assistant",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "qa:outbound-safety": "node scripts/qa-outbound-safety.mjs",
+    "qa:outbound-behavior": "node scripts/qa-outbound-behavior.mjs",
+    "check": "npm run qa:outbound-safety && npm run qa:outbound-behavior"
+  }
+}

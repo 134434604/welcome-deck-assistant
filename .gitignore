@@ -1,6 +1,7 @@
-.clasp.json
-.clasprc.json
-.DS_Store
 node_modules/
+.env
+.clasprc.json
 *.log
-tmp/
+*.tmp
+.DS_Store
+Thumbs.db
